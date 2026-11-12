@@ -108,12 +108,13 @@
   var API = 'https://script.google.com/macros/s/AKfycbzxlDM0vbjCH8MCDHafTl9njW3d4XW7fJJ8yY6OSjinWkEEF1wId5k8eMEUREedXCHZkw/exec';
   var $ = function (i) { return document.getElementById(i); };
   var S = { token: null, exp: 0, user: null, boot: null, idx: {}, skew: 0, queue: [], recent: [], count: 0, lastCode: '', lastAt: 0,
-            stream: null, det: null, running: false, camTry: 0, online: navigator.onLine, syncing: false, hideT: null };
+            stream: null, det: null, running: false, camTry: 0, online: navigator.onLine, syncing: false, hideT: null,
+            done: load('ep.done', { t: '', k: {} }), ms: 0, srv: 0, disp: null };
 
   function load(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function uuid() { return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'T' + Date.now() + '-' + Math.random().toString(36).slice(2, 12); }
-  function toast(t) { var e = $('toast'); e.textContent = t; e.classList.add('on'); setTimeout(function () { e.classList.remove('on'); }, 3000); }
+  function toast(t, ms) { var e = $('toast'); e.textContent = t; e.classList.add('on'); setTimeout(function () { e.classList.remove('on'); }, ms || 3000); }
 
   // ---------- API ----------
   function api(action, payload, ms) {
@@ -122,7 +123,7 @@
       body: JSON.stringify({ action: action, token: S.token, payload: payload }) })
       .then(function (r) { return r.json(); })
       .then(function (j) {
-        clearTimeout(t); setOnline(true);
+        clearTimeout(t); setOnline(true); S.srv = j.srvMs;
         if (!j.ok) { var e = new Error(j.error.message); e.code = j.error.code; throw e; }
         return j.data;
       }, function (e) { clearTimeout(t); setOnline(false); e.net = true; throw e; });
@@ -177,7 +178,9 @@
   // ---------- data siswa ----------
   function bootstrap() {
     return api('scanner.bootstrap', {}, 20000).then(function (d) {
-      S.boot = d; S.skew = Date.parse(d.serverTime) - Date.now(); save('ep.boot', d); save('ep.skew', S.skew); buildIdx(); render();
+      S.boot = d; S.skew = Date.parse(d.serverTime) - Date.now(); save('ep.boot', d); save('ep.skew', S.skew); buildIdx();
+      if (S.done.t !== d.tanggal) { S.done = { t: d.tanggal, k: {} }; save('ep.done', S.done); S.count = 0; }
+      render();
     }).catch(function (e) {
       if (e.code === 'SESI_BERAKHIR' || e.code === 'PERANGKAT_DICABUT') return forceLogin(e.message);
       if (!S.boot) { S.boot = load('ep.boot', null); S.skew = load('ep.skew', 0); buildIdx(); }
@@ -193,38 +196,73 @@
     S.lastCode = code; S.lastAt = n; submit(code);
   }
   function submit(nis) {
+    var t0 = performance.now();
     if (!S.boot) { result({ hasil: 'DITOLAK', pesan: 'Data siswa belum siap. Tunggu sebentar.' }); beep(false); return; }
     var st = S.idx[nis];
     if (!st) { result({ hasil: 'DITOLAK', pesan: 'BARCODE TIDAK TERDAFTAR', nis: nis }); beep(false); return; }
     var sesi = activeSesi();
-    if (!sesi && !S.online) { result({ hasil: 'DITOLAK', pesan: 'Di luar jam sesi presensi.', nis: nis }, st); beep(false); return; }
-    var item = { transaksiId: uuid(), nis: nis, waktuPerangkat: new Date().toISOString() };
-    result({ hasil: 'PROSES', pesan: 'Memproses...', nis: nis }, st);
-    if (!S.online) { enqueue(item, st); return; }
-    var t0 = performance.now();
-    api('scan.submit', { items: [{ transaksiId: item.transaksiId, nis: nis, offline: false, waktuPerangkat: item.waktuPerangkat }] }, 8000).then(function (r) {
-      S.ms = Math.round(performance.now() - t0); result(r[0], st); beep(r[0].hasil === 'DITERIMA' || r[0].hasil === 'MENUNGGU_PEMERIKSAAN');
-    }).catch(function (e) {
-      if (e.net) return enqueue(item, st);
-      if (e.code === 'SESI_BERAKHIR' || e.code === 'PERANGKAT_DICABUT') { enqueue(item, st); return forceLogin(e.message); }
-      result({ hasil: 'DITOLAK', pesan: e.message, nis: nis }, st); beep(false);
-    });
+    if (!sesi) {   // minta alasan resmi dari server (mis. "Sesi ZUHUR dibuka pukul 11:45")
+      if (S.online) return direct(nis, st);
+      result({ hasil: 'DITOLAK', pesan: 'Di luar jam sesi presensi.', nis: nis }, st); beep(false); return;
+    }
+    if (sesi === 'ZUHUR' && st[3]) { result({ hasil: 'DITOLAK', pesan: 'Siswa dikecualikan dari presensi Zuhur.', nis: nis, sesi: sesi }, st); beep(false); return; }
+    var key = sesi + '|' + nis;
+    if (S.done.k[key]) { result({ hasil: 'DITOLAK', pesan: 'Sudah presensi ' + sesi + ' pukul ' + S.done.k[key] + ' (tercatat di perangkat ini).', nis: nis, sesi: sesi }, st); beep(false); return; }
+    var j = S.boot.jadwal[sesi], sec = secOf(jkt(nowMs()));
+    var ls = (sesi === 'PULANG' || sec <= j.hadir) ? 'HADIR' : 'TERLAMBAT';
+    var item = { transaksiId: uuid(), nis: nis, waktuPerangkat: new Date().toISOString(), nama: st[1], sesi: sesi, first: S.online };
+    S.done.k[key] = clockStr(); save('ep.done', S.done);
+    if (S.online) {   // hasil tampil seketika; konfirmasi server menyusul di latar belakang
+      item.ls = ls; S.queue.push(item); save('ep.queue', S.queue);
+      result({ hasil: 'DITERIMA', status: ls, sesi: sesi, nis: nis, pesan: 'Menyimpan ke server...' }, st); beep(true);
+      S.disp = Math.round(performance.now() - t0); sync();
+    } else {
+      S.queue.push(item); save('ep.queue', S.queue);
+      result({ hasil: 'TERSIMPAN', pesan: 'Tersimpan di perangkat. Akan dikirim saat online.', nis: nis, sesi: sesi }, st); beep(true);
+      S.disp = Math.round(performance.now() - t0);
+    }
   }
-  function enqueue(item, st) {
-    S.queue.push(item); save('ep.queue', S.queue);
-    result({ hasil: 'TERSIMPAN', pesan: 'Tersimpan di perangkat. Akan dikirim saat online.', nis: item.nis, sesi: activeSesi() }, st); beep(true); render();
+  function direct(nis, st) {
+    var item = { transaksiId: uuid(), nis: nis, async: true, waktuPerangkat: new Date().toISOString() };
+    result({ hasil: 'PROSES', pesan: 'Memeriksa ke server...', nis: nis }, st);
+    api('scan.submit', { items: [item] }, 10000).then(function (r) { result(r[0], st); beep(r[0].hasil === 'DITERIMA'); })
+      .catch(function (e) {
+        if (e.code === 'SESI_BERAKHIR' || e.code === 'PERANGKAT_DICABUT') return forceLogin(e.message);
+        result({ hasil: 'DITOLAK', pesan: e.net ? 'Tidak dapat terhubung ke server.' : e.message, nis: nis }, st); beep(false);
+      });
   }
   function sync() {
     if (S.syncing || !S.token || !S.queue.length) return;
     S.syncing = true;
-    var batch = S.queue.slice(0, 50);
-    api('scan.submit', { items: batch.map(function (q) { return { transaksiId: q.transaksiId, nis: q.nis, offline: true, waktuPerangkat: q.waktuPerangkat }; }) }, 25000).then(function (res) {
-      var done = {}, pend = 0; res.forEach(function (r) { done[r.transaksiId] = 1; if (r.hasil === 'MENUNGGU_PEMERIKSAAN') pend++; });
-      S.queue = S.queue.filter(function (q) { return !done[q.transaksiId]; }); save('ep.queue', S.queue);
-      toast(res.length + ' transaksi terkirim' + (pend ? ', ' + pend + ' menunggu pemeriksaan Admin' : '') + '.');
+    var batch = S.queue.slice(0, 50), byId = {}, t0 = performance.now();
+    batch.forEach(function (q) { byId[q.transaksiId] = q; });
+    api('scan.submit', { items: batch.map(function (q) {
+      var o = { transaksiId: q.transaksiId, nis: q.nis, waktuPerangkat: q.waktuPerangkat };
+      if (q.first) o.async = true; else o.offline = true;
+      return o;
+    }) }, 30000).then(function (res) {
+      S.ms = Math.round(performance.now() - t0);
+      var done = {}, pend = 0, corr = 0, off = 0;
+      res.forEach(function (r) {
+        if (r.hasil === 'GAGAL') return;   // tetap di antrean, dicoba lagi
+        done[r.transaksiId] = 1; var q = byId[r.transaksiId];
+        if (q && !q.first) off++;
+        if (r.hasil === 'MENUNGGU_PEMERIKSAAN') pend++;
+        if (q && r.hasil === 'DITOLAK') {
+          corr++;
+          if (r.kode !== 'SUDAH_PRESENSI') delete S.done.k[q.sesi + '|' + q.nis];
+          if (q.ls) S.count = Math.max(0, S.count - 1);
+          pushRecent('KOREKSI ' + (q.nama || q.nis) + ': ' + r.pesan);
+        }
+      });
+      S.queue = S.queue.filter(function (q) { return !done[q.transaksiId]; });
+      save('ep.queue', S.queue); save('ep.done', S.done);
+      if (corr) { toast('KOREKSI: ' + corr + ' scan ditolak server. Lihat Hasil terakhir.', 7000); beep(false); }
+      else if (off) toast(off + ' transaksi offline terkirim' + (pend ? ', ' + pend + ' menunggu pemeriksaan Admin' : '') + '.');
       S.syncing = false; render(); if (S.queue.length) setTimeout(sync, 300);
     }).catch(function (e) {
       S.syncing = false;
+      if (e.net) { batch.forEach(function (q) { q.first = false; }); save('ep.queue', S.queue); }   // jalur offline dengan waktu perangkat
       if (e.code === 'SESI_BERAKHIR' || e.code === 'PERANGKAT_DICABUT') forceLogin(e.message + ' Antrean tetap tersimpan.');
       render();
     });
@@ -326,7 +364,7 @@
     var th = (b && b.antreanPeringatan) || 50;
     c = $('cQ'); c.textContent = 'Antrean: ' + S.queue.length; c.className = 'chip ' + (S.queue.length >= th ? 'bad' : S.queue.length ? 'warn' : '');
     $('cCnt').textContent = 'Scan perangkat ini: ' + S.count;
-    if (S.ms) { $('cMs').hidden = false; $('cMs').textContent = 'Respons: ' + S.ms + ' ms'; }
+    if (S.ms || S.disp !== null) { $('cMs').hidden = false; $('cMs').textContent = 'Tampil: ' + (S.disp === null ? '-' : S.disp + ' ms') + ' | Server: ' + (S.ms || '-') + ' ms' + (S.srv ? ' (proses ' + S.srv + ')' : ''); }
   }
   function tick() {
     var n = jkt(nowMs());
