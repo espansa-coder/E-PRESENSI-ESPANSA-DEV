@@ -340,38 +340,15 @@
     newPassword,
     confirmation
   ) {
-    if (
-      !w.crypto ||
-      typeof w.crypto.getRandomValues !== 'function'
-    ) {
-      return Promise.reject(
-        new Error('Browser tidak mendukung pembangkit salt yang aman. Gunakan browser terbaru melalui HTTPS.')
-      );
-    }
-
-    if (
-      !w.bcrypt ||
-      typeof w.bcrypt.genSaltSync !== 'function'
-    ) {
-      return Promise.reject(
-        new Error('Modul keamanan password belum berhasil dimuat. Muat ulang halaman.')
-      );
-    }
-
-    var salt;
+    var saltHex;
 
     try {
-      // Salt bcrypt dibuat dengan Web Crypto; cost dikunci pada 10.
-      salt = w.bcrypt.genSaltSync(10);
+      // 16 byte salt acak dari Web Crypto (32 karakter hexadecimal).
+      // randomHex_ menggunakan crypto.getRandomValues dan tidak memiliki fallback lemah.
+      saltHex = randomHex_(16);
     } catch (error) {
       return Promise.reject(
-        new Error('Salt password aman gagal dibuat. Periksa dukungan Web Crypto browser.')
-      );
-    }
-
-    if (!/^\$2b\$10\$[./A-Za-z0-9]{22}$/.test(salt)) {
-      return Promise.reject(
-        new Error('Format salt keamanan tidak valid.')
+        new Error('Salt password aman gagal dibuat. Gunakan browser terbaru melalui HTTPS.')
       );
     }
 
@@ -380,7 +357,7 @@
       currentPassword: currentPassword,
       newPassword: newPassword,
       confirmation: confirmation,
-      salt: salt
+      saltHex: saltHex
     });
   };
 
