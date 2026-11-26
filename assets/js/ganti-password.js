@@ -36,7 +36,6 @@
       if (window.TextEncoder) {
         return new TextEncoder().encode(value).length;
       }
-
       return unescape(encodeURIComponent(value)).length;
     }
 
@@ -70,12 +69,14 @@
         return;
       }
 
-      if (newPassword.length < 8) {
-        showMessage_('Password baru minimal 8 karakter.');
+      // Kebijakan E-PRESENSI ESPANSA: minimal 10 karakter.
+      if (newPassword.length < 10) {
+        showMessage_('Password baru minimal 10 karakter.');
         newInput.focus();
         return;
       }
 
+      // Batas kompatibilitas bcrypt: maksimal 72 byte UTF-8.
       if (utf8ByteLength_(newPassword) > 72) {
         showMessage_('Password baru maksimal 72 byte UTF-8.');
         newInput.focus();
@@ -96,32 +97,28 @@
 
       setLoading_(true);
 
-      window.EP.changePassword(
-        currentPassword,
-        newPassword,
-        confirmation
-      )
-      .then(function () {
-        // Sesi browser dihapus agar pengguna harus login ulang.
-        sessionStorage.removeItem('ep.sess');
-        sessionStorage.setItem(
-          'ep.msg',
-          'Password berhasil diubah. Silakan login kembali menggunakan password baru.'
-        );
-        window.location.replace('login.html');
-      })
-      .catch(function (error) {
-        showMessage_(
-          error && error.message
-            ? error.message
-            : 'Password belum berhasil diubah. Silakan coba kembali.'
-        );
-        currentInput.value = '';
-        currentInput.focus();
-      })
-      .finally(function () {
-        setLoading_(false);
-      });
+      window.EP.changePassword(currentPassword, newPassword, confirmation)
+        .then(function () {
+          // Backend mencabut seluruh sesi. Hapus sesi browser ini juga.
+          sessionStorage.removeItem('ep.sess');
+          sessionStorage.setItem(
+            'ep.msg',
+            'Password berhasil diubah. Silakan login kembali menggunakan password baru.'
+          );
+          window.location.replace('login.html');
+        })
+        .catch(function (error) {
+          showMessage_(
+            error && error.message
+              ? error.message
+              : 'Password belum berhasil diubah. Silakan coba kembali.'
+          );
+          currentInput.value = '';
+          currentInput.focus();
+        })
+        .finally(function () {
+          setLoading_(false);
+        });
     });
 
     logoutButton.addEventListener('click', function () {
