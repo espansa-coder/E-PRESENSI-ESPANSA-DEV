@@ -1,7 +1,7 @@
 /* =====================================================
  * E-PRESENSI ESPANSA
  * LOGIN PAGE
- * Versi 1.1.0 - WEB / DEV
+ * Versi 1.1.0 - DEV
  * ===================================================== */
 
 (function () {
@@ -45,7 +45,26 @@
     }
 
     function getRole_(user) {
-      return user.role || user.ROLE || '';
+      return String(user.role || user.ROLE || '').trim().toUpperCase();
+    }
+
+    function continueByRole_(user, fromExistingSession) {
+      var role = getRole_(user);
+
+      if (role === 'ADMIN_UTAMA') {
+        window.location.replace('dashboard-admin-utama.html');
+        return true;
+      }
+
+      form.hidden = true;
+      successPanel.hidden = false;
+      welcomeMessage.textContent = fromExistingSession
+        ? 'Sesi aktif: ' + getUserName_(user) + (role ? ' (' + role + ').' : '.')
+        : 'Selamat datang, ' + getUserName_(user) + (role ? ' (' + role + ').' : '.');
+
+      nextStepMessage.textContent =
+        'Autentikasi berhasil dan sesi login tersimpan. Dashboard untuk peran ini belum diintegrasikan pada tahap DEV saat ini.';
+      return false;
     }
 
     togglePassword.addEventListener('click', function () {
@@ -88,21 +107,13 @@
       window.EP.login(username, password, { source: 'WEB' })
         .then(function (result) {
           var user = result.user || {};
-          var role = getRole_(user);
 
           if (result.mustChange) {
             window.location.replace('ganti-password.html');
             return;
           }
 
-          form.hidden = true;
-          successPanel.hidden = false;
-          welcomeMessage.textContent =
-            'Selamat datang, ' + getUserName_(user) +
-            (role ? ' (' + role + ').' : '.');
-
-          nextStepMessage.textContent =
-            'Autentikasi berhasil dan sesi login tersimpan di browser ini. Dashboard sesuai peran akan dihubungkan pada tahap berikutnya.';
+          continueByRole_(user, false);
         })
         .catch(function (error) {
           showMessage_(
@@ -126,7 +137,7 @@
       }
     });
 
-    // Jika sesi sudah ada, jangan menampilkan form login ulang.
+    // Sesi aktif diarahkan sesuai peran; perubahan password wajib tetap didahulukan.
     var existingSession = window.EP && window.EP.session
       ? window.EP.session()
       : null;
@@ -137,12 +148,7 @@
     }
 
     if (existingSession && existingSession.token && existingSession.user) {
-      form.hidden = true;
-      successPanel.hidden = false;
-      welcomeMessage.textContent =
-        'Sesi aktif: ' + getUserName_(existingSession.user) + '.';
-      nextStepMessage.textContent =
-        'Sesi login masih tersimpan pada tab browser ini. Dashboard sesuai peran akan dihubungkan pada tahap berikutnya.';
+      continueByRole_(existingSession.user, true);
     } else {
       var flashMessage = sessionStorage.getItem('ep.msg');
       if (flashMessage) {
