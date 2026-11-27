@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#10264F">
+  <meta name="description" content="Dashboard Admin Utama E-PRESENSI ESPANSA - Lingkungan DEV">
+  <title>Dashboard Admin Utama · E-PRESENSI ESPANSA</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/dashboard-admin.css">
+  <script src="assets/js/api.js" defer></script>
+  <script src="assets/js/dashboard-admin-utama.js" defer></script>
+</head>
+<body class="admin-dashboard-page">
+  <main class="admin-dashboard">
+    <header class="admin-topbar">
+      <div class="admin-brand">
+        <p class="admin-eyebrow">SMP NEGERI 1 PANAWANGAN</p>
+        <h1>E-PRESENSI ESPANSA</h1>
+        <p class="admin-subtitle">Dashboard Admin Utama</p>
+      </div>
+      <button id="logoutButton" class="admin-logout" type="button">Keluar</button>
+    </header>
+
+    <section class="admin-welcome">
+      <div>
+        <p class="admin-eyebrow">LINGKUNGAN PENGUJIAN DEV</p>
+        <h2 id="welcomeName">Memuat akun...</h2>
+        <p>Panel kendali Admin Utama E-PRESENSI ESPANSA.</p>
+      </div>
+      <span class="admin-role">ADMIN UTAMA</span>
+    </section>
+
+    <section class="admin-section" aria-labelledby="overviewTitle">
+      <div class="admin-section-heading">
+        <h2 id="overviewTitle">Ringkasan</h2>
+        <p>Informasi akun dan kondisi koneksi layanan.</p>
+      </div>
+      <div class="admin-grid">
+        <article class="admin-card">
+          <span class="admin-card-label">Akun aktif</span>
+          <strong id="accountName">—</strong>
+          <p id="accountUsername">Username: —</p>
+        </article>
+        <article class="admin-card">
+          <span class="admin-card-label">Hak akses</span>
+          <strong>Admin Utama</strong>
+          <p>Peran dengan kewenangan tertinggi pada aplikasi.</p>
+        </article>
+        <article class="admin-card">
+          <span class="admin-card-label">Koneksi backend</span>
+          <strong id="backendStatus" class="admin-status admin-status-pending">Memeriksa...</strong>
+          <p id="backendDetail" role="status" aria-live="polite">Menghubungi layanan E-PRESENSI.</p>
+          <div class="admin-status-actions">
+            <span id="backendCheckedAt" class="admin-checked-at">Belum diperiksa</span>
+            <button id="checkBackendButton" class="admin-refresh" type="button">Periksa ulang</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="admin-section" aria-labelledby="modulesTitle">
+      <div class="admin-section-heading">
+        <h2>Area Administrasi</h2>
+        <p>Modul akan diaktifkan setelah layanan backend dan hak aksesnya siap.</p>
+      </div>
+      <div class="admin-module-list">
+        <div class="admin-module"><span>01</span><div><strong>Manajemen Pengguna</strong><p>Pengelolaan akun, status, dan peran pengguna.</p></div><em>Dalam pengembangan</em></div>
+        <div class="admin-module"><span>02</span><div><strong>Pengaturan Aplikasi</strong><p>Konfigurasi operasional E-PRESENSI.</p></div><em>Dalam pengembangan</em></div>
+        <div class="admin-module"><span>03</span><div><strong>Audit dan Keamanan</strong><p>Pemantauan aktivitas dan keamanan sistem.</p></div><em>Dalam pengembangan</em></div>
+      </div>
+    </section>
+
+    <footer class="admin-footer">E-PRESENSI ESPANSA v1.1.0 · DEV · Bukan lingkungan produksi</footer>
+  </main>
+</body>
+</html>
