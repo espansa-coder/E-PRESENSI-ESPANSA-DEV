@@ -14,7 +14,7 @@
 <body class="admin-dashboard-page">
   <main class="admin-dashboard">
     <header class="admin-topbar">
-      <div>
+      <div class="admin-brand">
         <p class="admin-eyebrow">SMP NEGERI 1 PANAWANGAN</p>
         <h1>E-PRESENSI ESPANSA</h1>
         <p class="admin-subtitle">Dashboard Admin Utama</p>
@@ -25,8 +25,8 @@
     <section class="admin-welcome">
       <div>
         <p class="admin-eyebrow">LINGKUNGAN PENGUJIAN DEV</p>
-        <h2 id="welcomeName">Selamat datang</h2>
-        <p>Autentikasi dan pengalihan berdasarkan peran telah terhubung.</p>
+        <h2 id="welcomeName">Memuat akun...</h2>
+        <p>Panel kendali Admin Utama E-PRESENSI ESPANSA.</p>
       </div>
       <span class="admin-role">ADMIN UTAMA</span>
     </section>
@@ -34,12 +34,12 @@
     <section class="admin-section" aria-labelledby="overviewTitle">
       <div class="admin-section-heading">
         <h2 id="overviewTitle">Ringkasan</h2>
-        <p>Kerangka awal dashboard. Fitur operasional akan diintegrasikan bertahap.</p>
+        <p>Informasi akun dan kondisi koneksi layanan.</p>
       </div>
       <div class="admin-grid">
         <article class="admin-card">
           <span class="admin-card-label">Akun aktif</span>
-          <strong id="accountName">Admin Utama</strong>
+          <strong id="accountName">—</strong>
           <p id="accountUsername">Username: —</p>
         </article>
         <article class="admin-card">
@@ -48,22 +48,26 @@
           <p>Peran dengan kewenangan tertinggi pada aplikasi.</p>
         </article>
         <article class="admin-card">
-          <span class="admin-card-label">Status halaman</span>
-          <strong class="admin-status">Kerangka awal</strong>
-          <p>Belum menjalankan modul administrasi operasional.</p>
+          <span class="admin-card-label">Koneksi backend</span>
+          <strong id="backendStatus" class="admin-status admin-status-pending">Memeriksa...</strong>
+          <p id="backendDetail" role="status" aria-live="polite">Menghubungi layanan E-PRESENSI.</p>
+          <div class="admin-status-actions">
+            <span id="backendCheckedAt" class="admin-checked-at">Belum diperiksa</span>
+            <button id="checkBackendButton" class="admin-refresh" type="button">Periksa ulang</button>
+          </div>
         </article>
       </div>
     </section>
 
     <section class="admin-section" aria-labelledby="modulesTitle">
       <div class="admin-section-heading">
-        <h2 id="modulesTitle">Area Administrasi</h2>
-        <p>Daftar area yang akan dibangun pada tahap berikutnya.</p>
+        <h2>Area Administrasi</h2>
+        <p>Modul akan diaktifkan setelah layanan backend dan hak aksesnya siap.</p>
       </div>
       <div class="admin-module-list">
-        <div class="admin-module"><span>01</span><div><strong>Manajemen Pengguna</strong><p>Pengelolaan akun dan peran pengguna.</p></div><em>Belum tersedia</em></div>
-        <div class="admin-module"><span>02</span><div><strong>Pengaturan Aplikasi</strong><p>Konfigurasi operasional E-PRESENSI.</p></div><em>Belum tersedia</em></div>
-        <div class="admin-module"><span>03</span><div><strong>Audit dan Keamanan</strong><p>Pemantauan aktivitas dan keamanan sistem.</p></div><em>Belum tersedia</em></div>
+        <div class="admin-module"><span>01</span><div><strong>Manajemen Pengguna</strong><p>Pengelolaan akun, status, dan peran pengguna.</p></div><em>Dalam pengembangan</em></div>
+        <div class="admin-module"><span>02</span><div><strong>Pengaturan Aplikasi</strong><p>Konfigurasi operasional E-PRESENSI.</p></div><em>Dalam pengembangan</em></div>
+        <div class="admin-module"><span>03</span><div><strong>Audit dan Keamanan</strong><p>Pemantauan aktivitas dan keamanan sistem.</p></div><em>Dalam pengembangan</em></div>
       </div>
     </section>
 
